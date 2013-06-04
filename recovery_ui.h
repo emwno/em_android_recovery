@@ -72,7 +72,6 @@ int device_wipe_data();
 #define SELECT_ITEM         -4
 #define GO_BACK             -5
 
-#define ITEM_REBOOT          0
 #define ITEM_APPLY_EXT       1
 #define ITEM_APPLY_SDCARD    1  // historical synonym for ITEM_APPLY_EXT
 #define ITEM_APPLY_SIDELOAD  2
@@ -83,7 +82,7 @@ int device_wipe_data();
 #define ITEM_NANDROID        5
 #define ITEM_PARTITION       6
 #define ITEM_ADVANCED        7
-#define ITEM_POWEROFF        8
+#define ITEM_POWER_MENU      8
 
 // Header text to display above the main menu.
 extern char* MENU_HEADERS[];

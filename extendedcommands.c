@@ -1359,8 +1359,7 @@ void show_advanced_menu()
                                 NULL
     };
 
-    static char* list[] = { "reboot recovery",
-		            "efs menu",
+    static char* list[] = { "efs menu",
                             "wipe dalvik cache",
                             "fix permissions",
                             "partition sdcard",
@@ -1387,12 +1386,9 @@ void show_advanced_menu()
         switch (chosen_item)
         {
             case 0:
-                android_reboot(ANDROID_RB_RESTART2, 0, "recovery");
-                break;
-            case 1:
                 show_efs_menu();
                 break;
-            case 2:
+            case 1:
                 if (0 != ensure_path_mounted("/data"))
                     break;
                 ensure_path_mounted("/sd-ext");
@@ -1405,25 +1401,63 @@ void show_advanced_menu()
                 }
                 ensure_path_unmounted("/data");
                 break;
-            case 3:
+            case 2:
+                if (confirm_selection("Confirm ?", "Yes - Fix Permissions")) {
                 ensure_path_mounted("/system");
                 ensure_path_mounted("/data");
                 ui_print("Fixing permissions...\n");
                 __system("fix_permissions");
                 ui_print("Done!\n");
+                }
                 break;
-            case 4:
+            case 3:
                 partition_sdcard("/sdcard");
                 break;
-            case 5:
+            case 4:
                 partition_sdcard("/external_sd");
                 break;
-            case 6:
+            case 5:
                 partition_sdcard("/emmc");
                 break;
         }
     }
 }
+// show power menu
+void show_power_menu()
+{
+    static char* headers[] = {  "Power Menu",
+                                NULL
+    };
+
+    static char* list[] = { "Reboot to Recovery",
+                            "Reboot to Download Mode",
+                            "Reboot to ROM",
+                            "Power Off",
+                             NULL
+    };
+
+    for (;;) {
+        int chosen_item = get_filtered_menu_selection(headers, list, 0, 0, sizeof(list) / sizeof(char*));
+        if (chosen_item == GO_BACK)
+            break;
+        switch (chosen_item)
+        {
+            case 0:
+                android_reboot(ANDROID_RB_RESTART2, 0, "recovery");
+                break;
+            case 1:
+                android_reboot(ANDROID_RB_RESTART2, 0, "download");
+                break;
+            case 2:
+                poweroff=0;
+                break;
+            case 3:
+                poweroff=1;
+                break;
+        }
+    }
+}
+// finish power menu
 
 void write_fstab_root(char *path, FILE *file)
 {

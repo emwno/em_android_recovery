@@ -699,10 +699,6 @@ prompt_and_wait() {
 
         int status;
         switch (chosen_item) {
-            case ITEM_REBOOT:
-                poweroff=0;
-                return;
-
             case ITEM_WIPE_DATA:
                 wipe_data(ui_text_visible());
                 if (!ui_text_visible()) return;
@@ -738,9 +734,9 @@ prompt_and_wait() {
                 show_advanced_menu();
                 break;
 
-            case ITEM_POWEROFF:
-                poweroff = 1;
-                return;
+            case ITEM_POWER_MENU:
+                show_power_menu();
+                break; 
         }
     }
 }
