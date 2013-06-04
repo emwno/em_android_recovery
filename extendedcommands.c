@@ -1362,9 +1362,6 @@ void show_advanced_menu()
     static char* list[] = { "reboot recovery",
 		            "efs menu",
                             "wipe dalvik cache",
-                            "report error",
-                            "key test",
-                            "show log",
                             "fix permissions",
                             "partition sdcard",
                             "partition external sdcard",
@@ -1409,40 +1406,19 @@ void show_advanced_menu()
                 ensure_path_unmounted("/data");
                 break;
             case 3:
-                handle_failure(1);
-                break;
-            case 4:
-            {
-                ui_print("Outputting key codes.\n");
-                ui_print("Go back to end debugging.\n");
-                int key;
-                int action;
-                do
-                {
-                    key = ui_wait_key();
-                    action = device_handle_key(key, 1);
-                    ui_print("Key: %d\n", key);
-                }
-                while (action != GO_BACK);
-                break;
-            }
-            case 5:
-                ui_printlogtail(12);
-                break;
-            case 6:
                 ensure_path_mounted("/system");
                 ensure_path_mounted("/data");
                 ui_print("Fixing permissions...\n");
                 __system("fix_permissions");
                 ui_print("Done!\n");
                 break;
-            case 7:
+            case 4:
                 partition_sdcard("/sdcard");
                 break;
-            case 8:
+            case 5:
                 partition_sdcard("/external_sd");
                 break;
-            case 9:
+            case 6:
                 partition_sdcard("/emmc");
                 break;
         }
