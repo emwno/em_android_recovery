@@ -699,6 +699,10 @@ prompt_and_wait() {
 
         int status;
         switch (chosen_item) {
+            case ITEM_REBOOT:
+                poweroff=0;
+                return;
+
             case ITEM_WIPE_DATA:
                 wipe_data(ui_text_visible());
                 if (!ui_text_visible()) return;

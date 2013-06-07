@@ -1449,10 +1449,10 @@ void show_power_menu()
                 android_reboot(ANDROID_RB_RESTART2, 0, "download");
                 break;
             case 2:
-                poweroff=0;
+                android_reboot(ANDROID_RB_RESTART, 0, 0); 
                 break;
             case 3:
-                poweroff=1;
+                android_reboot(ANDROID_RB_POWEROFF, 0, 0); 
                 break;
         }
     }
