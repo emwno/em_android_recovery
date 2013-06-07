@@ -579,7 +579,7 @@ void ui_init(void)
 
 char *ui_copy_image(int icon, int *width, int *height, int *bpp) {
     pthread_mutex_lock(&gUpdateMutex);
-    draw_background_locked(icon);
+    draw_background_locked(gBackgroundIcon[icon]);
     *width = gr_fb_width();
     *height = gr_fb_height();
     *bpp = sizeof(gr_pixel) * 8;
@@ -857,14 +857,6 @@ static int usb_connected() {
     return connected;
 }
 
-void ui_cancel_wait_key() {
-    pthread_mutex_lock(&key_queue_mutex);
-    key_queue[key_queue_len] = -2;
-    key_queue_len++;
-    pthread_cond_signal(&key_queue_cond);
-    pthread_mutex_unlock(&key_queue_mutex);
-}
-
 int ui_wait_key()
 {
     if (boardEnableKeyRepeat) return ui_wait_key_with_repeat();
@@ -1001,15 +993,6 @@ void ui_clear_key_queue() {
     pthread_mutex_lock(&key_queue_mutex);
     key_queue_len = 0;
     pthread_mutex_unlock(&key_queue_mutex);
-}
-
-void ui_set_log_stdout(int enabled) {
-    ui_log_stdout = enabled;
-}
-
-int ui_should_log_stdout()
-{
-    return ui_log_stdout;
 }
 
 void ui_set_show_text(int value) {

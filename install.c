@@ -266,12 +266,6 @@ try_update_binary(const char *path, ZipArchive *zip) {
 //
 //  "{64,0xc926ad21,{1795090719,...,-695002876},{-857949815,...,1175080310}}"
 //
-// For key versions newer than the original 2048-bit e=3 keys
-// supported by Android, the string is preceded by a version
-// identifier, eg:
-//
-//  "v2 {64,0xc926ad21,{1795090719,...,-695002876},{-857949815,...,1175080310}}"
-//
 // (Note that the braces and commas in this example are actual
 // characters the parser expects to find in the file; the ellipses
 // indicate more numbers omitted from this example.)
@@ -291,48 +285,31 @@ load_keys(const char* filename, int* numKeys) {
         goto exit;
     }
 
-    {
-        int i;
-        bool done = false;
-        while (!done) {
-            ++*numKeys;
-            out = (RSAPublicKey*)realloc(out, *numKeys * sizeof(RSAPublicKey));
-            RSAPublicKey* key = out + (*numKeys - 1);
+    int i;
+    bool done = false;
+    while (!done) {
+        ++*numKeys;
+        out = realloc(out, *numKeys * sizeof(RSAPublicKey));
+        RSAPublicKey* key = out + (*numKeys - 1);
+        if (fscanf(f, " { %i , 0x%x , { %u",
+                   &(key->len), &(key->n0inv), &(key->n[0])) != 3) {
+            goto exit;
+        }
+        if (key->len != RSANUMWORDS) {
+            LOGE("key length (%d) does not match expected size\n", key->len);
+            goto exit;
+        }
+        for (i = 1; i < key->len; ++i) {
+            if (fscanf(f, " , %u", &(key->n[i])) != 1) goto exit;
+        }
+        if (fscanf(f, " } , { %u", &(key->rr[0])) != 1) goto exit;
+        for (i = 1; i < key->len; ++i) {
+            if (fscanf(f, " , %u", &(key->rr[i])) != 1) goto exit;
+        }
+        fscanf(f, " } } ");
 
-            char start_char;
-            if (fscanf(f, " %c", &start_char) != 1) goto exit;
-            if (start_char == '{') {
-                // a version 1 key has no version specifier.
-                key->exponent = 3;
-            } else if (start_char == 'v') {
-                int version;
-                if (fscanf(f, "%d {", &version) != 1) goto exit;
-                if (version == 2) {
-                    key->exponent = 65537;
-                } else {
-                    goto exit;
-                }
-            }
-
-            if (fscanf(f, " %i , 0x%x , { %u",
-                       &(key->len), &(key->n0inv), &(key->n[0])) != 3) {
-                goto exit;
-            }
-            if (key->len != RSANUMWORDS) {
-                LOGE("key length (%d) does not match expected size\n", key->len);
-                goto exit;
-            }
-            for (i = 1; i < key->len; ++i) {
-                if (fscanf(f, " , %u", &(key->n[i])) != 1) goto exit;
-            }
-            if (fscanf(f, " } , { %u", &(key->rr[0])) != 1) goto exit;
-            for (i = 1; i < key->len; ++i) {
-                if (fscanf(f, " , %u", &(key->rr[i])) != 1) goto exit;
-            }
-            fscanf(f, " } } ");
-
-            // if the line ends in a comma, this file has more keys.
-            switch (fgetc(f)) {
+        // if the line ends in a comma, this file has more keys.
+        switch (fgetc(f)) {
             case ',':
                 // more keys to come.
                 break;
@@ -344,9 +321,6 @@ load_keys(const char* filename, int* numKeys) {
             default:
                 LOGE("unexpected character between keys\n");
                 goto exit;
-            }
-
-            LOGI("read key e=%d\n", key->exponent);
         }
     }
 

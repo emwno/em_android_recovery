@@ -56,7 +56,6 @@ static const struct option OPTIONS[] = {
   { "wipe_data", no_argument, NULL, 'w' },
   { "wipe_cache", no_argument, NULL, 'c' },
   { "show_text", no_argument, NULL, 't' },
-  { "sideload", no_argument, NULL, 'l' },
   { NULL, 0, NULL, 0 },
 };
 
@@ -442,6 +441,11 @@ get_menu_selection(char** headers, char** items, int menu_only,
     int selected = initial_selection;
     int chosen_item = -1;
 
+    // Some users with dead enter keys need a way to turn on power to select.
+    // Jiggering across the wrapping menu is one "secret" way to enable it.
+    // We can't rely on /cache or /sdcard since they may not be available.
+    int wrap_count = 0;
+
     while (chosen_item < 0 && chosen_item != GO_BACK) {
         int key = ui_wait_key();
         int visible = ui_text_visible();
@@ -454,9 +458,6 @@ get_menu_selection(char** headers, char** items, int menu_only,
                 ui_end_menu();
                 return ITEM_REBOOT;
             }
-        }
-        else if (key == -2) {
-            return GO_BACK;
         }
 
         int action = ui_handle_key(key, visible);
@@ -750,39 +751,6 @@ print_property(const char *key, const char *name, void *cookie) {
     printf("%s=%s\n", key, name);
 }
 
-static void
-setup_adbd() {
-    struct stat f;
-    static char *key_src = "/data/misc/adb/adb_keys";
-    static char *key_dest = "/adb_keys";
-
-    // Mount /data and copy adb_keys to root if it exists
-    ensure_path_mounted("/data");
-    if (stat(key_src, &f) == 0) {
-        FILE *file_src = fopen(key_src, "r");
-        if (file_src == NULL) {
-            LOGE("Can't open %s\n", key_src);
-        } else {
-            FILE *file_dest = fopen(key_dest, "w");
-            if (file_dest == NULL) {
-                LOGE("Can't open %s\n", key_dest);
-            } else {
-                char buf[4096];
-                while (fgets(buf, sizeof(buf), file_src)) fputs(buf, file_dest);
-                check_and_fclose(file_dest, key_dest);
-
-                // Enable secure adbd
-                property_set("ro.adb.secure", "1");
-            }
-            check_and_fclose(file_src, key_src);
-        }
-    }
-    ensure_path_unmounted("/data");
-
-    // Trigger (re)start of adb daemon
-    property_set("service.adb.root", "1");
-}
-
 int
 main(int argc, char **argv) {
 
@@ -812,15 +780,11 @@ main(int argc, char **argv) {
         if (strstr(argv[0], "erase_image") != NULL)
             return erase_image_main(argc, argv);
         if (strstr(argv[0], "mkyaffs2image") != NULL)
-             return mkyaffs2image_main(argc, argv);
-        if (strstr(argv[0], "make_ext4fs") != NULL)
-            return make_ext4fs_main(argc, argv);
+            return mkyaffs2image_main(argc, argv);
         if (strstr(argv[0], "unyaffs") != NULL)
             return unyaffs_main(argc, argv);
         if (strstr(argv[0], "nandroid"))
             return nandroid_main(argc, argv);
-        if (strstr(argv[0], "bu") == argv[0] + strlen(argv[0]) - 2)
-            return bu_main(argc, argv);
         if (strstr(argv[0], "reboot"))
             return reboot_main(argc, argv);
 #ifdef BOARD_RECOVERY_HANDLES_MOUNT
@@ -835,8 +799,6 @@ main(int argc, char **argv) {
         }
         if (strstr(argv[0], "setprop"))
             return setprop_main(argc, argv);
-        if (strstr(argv[0], "getprop"))
-            return getprop_main(argc, argv);
         return busybox_driver(argc, argv);
     }
     __system("/sbin/postrecoveryboot.sh");
@@ -861,7 +823,6 @@ main(int argc, char **argv) {
     const char *send_intent = NULL;
     const char *update_package = NULL;
     int wipe_data = 0, wipe_cache = 0;
-    int sideload = 0;
 
     LOGI("Checking arguments.\n");
     int arg;
@@ -877,22 +838,10 @@ main(int argc, char **argv) {
         break;
         case 'c': wipe_cache = 1; break;
         case 't': ui_show_text(1); break;
-        case 'l': sideload = 1; break;
         case '?':
             LOGE("Invalid command argument\n");
             continue;
         }
-    }
-
-    struct selinux_opt seopts[] = {
-      { SELABEL_OPT_PATH, "/file_contexts" }
-    };
-
-    sehandle = selabel_open(SELABEL_CTX_FILE, seopts, 1);
-
-    if (!sehandle) {
-        fprintf(stderr, "Warning: No file_contexts\n");
-        // ui_print("Warning:  No file_contexts\n");
     }
 
     LOGI("device_recovery_start()\n");
@@ -937,13 +886,6 @@ main(int argc, char **argv) {
     } else if (wipe_cache) {
         if (wipe_cache && erase_volume("/cache")) status = INSTALL_ERROR;
         if (status != INSTALL_SUCCESS) ui_print("Cache wipe failed.\n");
-    } else if (sideload) {
-        signature_check_enabled = 0;
-        ui_set_show_text(1);
-        if (0 == apply_from_adb()) {
-            status = INSTALL_SUCCESS;
-            ui_set_show_text(0);
-        }
     } else {
         LOGI("Checking for extendedcommand...\n");
         status = INSTALL_ERROR;  // No command specified
@@ -969,8 +911,6 @@ main(int argc, char **argv) {
             LOGI("Skipping execution of extendedcommand, file not found...\n");
         }
     }
-
-    setup_adbd();
 
     if (status != INSTALL_SUCCESS && !is_user_initiated_recovery) {
         ui_set_show_text(1);

@@ -2,9 +2,6 @@ extern int signature_check_enabled;
 extern int script_assert_enabled;
 
 void
-write_recovery_version();
-
-void
 toggle_signature_check();
 
 void
@@ -41,9 +38,6 @@ void
 show_advanced_menu();
 
 int format_unknown_device(const char *device, const char* path, const char *fs_type);
-
-void
-wipe_battery_stats();
 
 void create_fstab();
 

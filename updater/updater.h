@@ -20,8 +20,12 @@
 #include <stdio.h>
 #include "minzip/Zip.h"
 
+#ifdef HAVE_SELINUX
 #include <selinux/selinux.h>
 #include <selinux/label.h>
+#else
+struct selabel_handle;
+#endif
 
 typedef struct {
     FILE* cmd_pipe;
