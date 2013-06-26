@@ -742,6 +742,10 @@ prompt_and_wait() {
             case ITEM_POWER_MENU:
                 show_power_menu();
                 break; 
+
+            case ITEM_POWEROFF:
+                poweroff = 1;
+                return;
         }
     }
 }
